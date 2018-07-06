@@ -1,15 +1,24 @@
 import Vue from 'vue'
-
 import './style.scss'
-
-
-import MovieList from '@/MovieList.vue'
-import MovieFilter from '@/MovieFilter.vue'
+import router from './util/router'
+import axios from 'axios'
 
 new Vue({
     el: '#app',
-    components: {
-        MovieList,
-        MovieFilter
+    router,
+    data: {
+        movies: []
+    },
+    created() {
+        this.loadMovies()
+        this.$root.$on('load-movies', this.loadMovies)
+
+    },
+    methods: {
+        loadMovies() {
+            axios.get('/api').then(({data}) => { 
+                this.movies = data
+            })
+        }
     }
 })

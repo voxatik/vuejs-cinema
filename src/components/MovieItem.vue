@@ -1,28 +1,25 @@
 <template>
     <div class="movie">
         <div class="movie-col-left">
-            <img :src="movie.Poster" :alt="movie.Title">
+            <router-link :to="{name: 'movie', params: {id: id}}">
+                <img :src="movie.Poster" :alt="movie.Title">
+            </router-link>
         </div>        
         <div class="movie-col-right">
             <div class="movie-title">
-                <h2>{{ movie.Title }}</h2>
+                <router-link :to="{name: 'movie', params: {id: id}}">
+                    <h2>{{ movie.Title }}</h2>
+                </router-link>
                 <span class="movie-rating">{{ movie.Rated }}</span>
             </div>
-            <p>
-                movie times
-            </p>
+            <slot></slot>
         </div>        
     </div>
 </template>
 
 <script>
+
 export default {
-    props: ['item'],
-    data() {
-        return {
-            id: this.item.id,
-            movie: this.item.movie
-        }
-    },
+    props: ['id', 'movie'],
 }
 </script>

@@ -1,27 +1,45 @@
 <template>
     <div id="movie-list">
-        <movie-item v-for="movie in filteredMovies" :key="movie.id" :item="movie" ></movie-item>
+        <template v-if="filteredMovies.length">
+            <movie-item v-for="item in filteredMovies" 
+                        :key="item.id"
+                        :id="item.id"
+                        :movie="item.movie">
+                <div class="movie-sessions">
+                    <div class="session-time-wrapper">
+                        <span class="session-time"
+                            v-for="session in filterSessions(item.sessions)"
+                            :key="session.id">
+                            {{ formatTime(session) }}
+                        </span>
+                    </div>
+                </div>
+            </movie-item>
+        </template>
+        <div class="no-results" v-else>
+            {{ noResults }}
+        </div>
     </div>
 </template>
 
 <script>
 import genres from '../util/genres'
-import axios from 'axios'
+import times from '../util/times'
+import moment from '../util/moment'
 import MovieItem from '@/MovieItem.vue'
 
 export default {
-    mounted() {
-        axios.get('/api').then(({data}) => { 
-            this.movies = data
-        })
+    props: [ 'movies'],
+    created() {
         this.$root.$on('filter-genre', this.filterGenre)
         this.$root.$on('filter-time', this.filterTime)
+        this.$root.$on('day-changed', day => this.day = day)
     },
     data() {
         return {
-            movies: [],
             genreFilters: [],
-            timeFilters: []
+            timeFilters: [],
+            day: moment()
         }
     },
     methods: {
@@ -40,7 +58,47 @@ export default {
                     filter.splice(index, 1)
                 }
             }
+        },
+        passesTimeFilter({time}) {
+            time = moment(time)
+            if(! this.day.isSame(time, 'day')) {
+                return false
+            }
+           
+            if(! this.timeFilters.length || this.timeFilters.length === 2) {
+                return true
+            }
+
+            if(this.timeFilters[0] === times.BEFORE_6PM) {
+                return time.hour() < 18
+            } else {
+                return time.hour() >= 18
+            }
+            
+        },
+        passesGenreFilter(movie) {
+            if(! this.genreFilters.length) {
+                return true
+            }
+
+            let genres = movie.Genre.split(', '), 
+                matched = false
+            
+            genres.forEach(g => {
+                if(this.genreFilters.includes(g)) {
+                    matched = true
+                } 
+            })
+
+            return matched
+        },
+        filterSessions(sessions) {
+            return sessions.filter(this.passesTimeFilter)
+        },
+        formatTime({time}) {
+            return moment(time).format('h:mm A')
         }
+
     },
     computed: {
         hasFilters() {
@@ -50,18 +108,13 @@ export default {
             if(! this.hasFilters) {
                 return this.movies
             }
-            return this.movies.filter(({movie}) => {
-                let genres = movie.Genre.split(', '), 
-                    matched = false
-
-                genres.forEach(g => {
-                    if(this.genreFilters.includes(g)) {
-                        matched = true
-                    } 
-                })
-
-                return matched
-            })
+            return this.movies.filter(({movie}) => this.passesGenreFilter(movie))
+                .filter( ({sessions}) => sessions.find(this.passesTimeFilter))
+                
+        },
+        noResults() {
+            let filters = this.timeFilters.concat(this.genreFilters).join(', ')
+            return `No results for ${filters}.`
         }
     },
     components: {
